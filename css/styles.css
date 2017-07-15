@@ -1,0 +1,15 @@
+body {
+    margin: 0;
+    padding: 0;
+}
+
+.canvas-wrapper {
+    width: 900px;
+    margin: 0 auto;
+}
+
+.canvas {
+
+
+    border: 1px solid #000;
+}
