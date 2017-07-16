@@ -6,27 +6,30 @@ function Controller() {
         model = new Model();
 
     shipPlacement();
+    repaintField(model.computerField, view.computerField);
+    /*Устанавливает события, необходимые для размещения кораблей пользователем*/
     function shipPlacement() {
-        model.playerField.addShip(new Ship(model.sheepsSizeOrder.shift()));
+        model.playerField.addShip(new Ship(model.playerField.sheepsSizeOrder.shift()));
 
         document.getElementById("canvas").addEventListener("mousemove", placementEvent);
         document.getElementById("canvas").addEventListener("click", establishShip);
         window.addEventListener("keypress", changeShipOrientation);
 
+        /*Вешается на событие движения мыши над полем во время размещения кораблей игроком,
+         *перемещает по полю размещаемый корабль*/
         function placementEvent(event) {
             var position = view.playerField.getPosition(event);
-            if (position !== null)
-            {
+            if (position !== null) {
                 if (model.playerField.ships[model.playerField.ships.length - 1]
-                        .isNewPosition(position.posX, position.posY))
-                {
+                        .isNewPosition(position.posX, position.posY)) {
                     model.playerField.ships[model.playerField.ships.length - 1]
                         .setPosition(position.posX, position.posY);
                     repaintField(model.playerField, view.playerField);
                 }
             }
         }
-
+        /*Вешается на клавишу смены ориентации корабля (пробел) во время размещения кораблей игроком,
+         *меняет его ориентацию (корабля, а не игрока)*/
         function changeShipOrientation(event) {
             if (event.keyCode === 32) {
                 model.playerField.ships[model.playerField.ships.length - 1]
@@ -35,11 +38,15 @@ function Controller() {
             }
         }
 
+        /*Вешается на клик по полю во время размещения кораблей игроком, если позиция корабля допустима, то
+        * устанавлевает его на указанное место*/
         function establishShip(event) {
             var size;
+            /*Если курсор не за пределами поля и размещаемый корабль не пересекается с уже имеющимися*/
             if (view.playerField.getPosition(event) !== null &&
                 model.playerField.getCollisionWarnings(model.playerField.ships.length - 1) === null) {
-                size = model.sheepsSizeOrder.shift();
+                size = model.playerField.sheepsSizeOrder.shift();
+                /*если ещё остались корабли для размещения*/
                 if (size !== undefined) {
                     model.playerField.fieldMapAddShip(model.playerField.ships.length - 1);
                     model.playerField.addShip(new Ship(size));
@@ -50,7 +57,7 @@ function Controller() {
                 }
             }
         }
-
+        /*Снимает события отвечающие за размещение кораблей игроком*/
         function placementFinish() {
             document.getElementById("canvas").removeEventListener("mousemove", placementEvent);
             document.getElementById("canvas").removeEventListener("click", establishShip);
@@ -58,8 +65,8 @@ function Controller() {
         }
     }
 
+    /*Очищает и поля и рисует заново пустое поле, корабли и предупреждения о коллизиях (если есть)*/
     function repaintField(fieldData, fieldView) {
-        // var warnings = ;
         fieldView.clearField();
         fieldView.drawField();
         fieldView.drawShips(fieldData.ships);
@@ -68,8 +75,9 @@ function Controller() {
 }
 
 function Model() {
-    this.sheepsSizeOrder = [1, 1, 1, 1, 2, 2, 2, 3, 3, 4];
     this.playerField = new FieldData();
+    this.computerField = new FieldData();
+    this.computerField.ShipsAutoPlacement();
 }
 
 function View() {
@@ -110,50 +118,39 @@ function Field(properties) {
     var canvas = document.getElementById("canvas");
     var context = canvas.getContext("2d");
     var that = this;
-
+    /*Возвращает положение курсора на поле по его координатам, если курсор за
+    * пределами поля, возвращается null*/
     this.getPosition = function(event) {
         var canvasPosition = canvas.getBoundingClientRect(),
             result = {posX: Math.floor(((event.clientX - canvasPosition.left - 1) - fieldPositionX) / (cellSize + lineWidth)),
                 posY: Math.floor(((event.clientY - canvasPosition.top - 2) - fieldPositionY) / (cellSize + lineWidth))
             };
-        if (result.posX < 0 || result.posX > 9 || result.posY < 0 || result.posY > 9 )
-        {
+        if (result.posX < 0 || result.posX > 9 || result.posY < 0 || result.posY > 9 ) {
             return null;
         }
-        else
-        {
+        else {
             return result;
         }
     };
 
-/*    function showPosition(position) {
-        if (position === null)
-        {
-            document.getElementById("result").innerHTML = "Курсор за пределами поля";
-        }
-        else
-        {
-            document.getElementById("result").innerHTML = position.posX + "--" + position.posY;
-        }
-
-    }*/
-
+    /*Принимает позицию ячейки на поле, возващает её координаты в пикселах по оси x*/
     function getCellCoordinateLineX(cellNum) {
         return fieldPositionX + (cellSize + lineWidth) * (cellNum + 1);
     }
 
+    /*Принимает позицию ячейки на поле, возващает её координаты в пикселах по оси y*/
     function getCellCoordinateLineY(cellNum) {
         return fieldPositionY + (cellSize + lineWidth) * (cellNum + 1);
     }
 
+    /*Рисует пустое поле*/
     this.drawField = function() {
         var i;
         context.beginPath();
         context.strokeStyle = fieldColor;
         context.lineWidth = lineWidth;
         context.rect(fieldPositionX, fieldPositionY, fieldSize, fieldSize);
-        for (i = 0; i < 9; i += 1)
-        {
+        for (i = 0; i < 9; i += 1) {
             context.moveTo(fieldPositionX, getCellCoordinateLineY(i));
             context.lineTo(fieldPositionX + fieldSize, getCellCoordinateLineY(i));
             context.moveTo(getCellCoordinateLineX(i), fieldPositionY);
@@ -163,10 +160,12 @@ function Field(properties) {
         context.closePath();
     };
 
+    /*Принимает позицию ячейки на поле, возвращает смещение её смещение в пикселах*/
     function getCoordinateOffset(cellNum) {
         return (cellSize + lineWidth) * cellNum;
     }
 
+    /*Рисует все корабли в массиве ships, содержащим объекты типа Ship*/
     this.drawShips = function (ships) {
         var max,
             i;
@@ -185,13 +184,11 @@ function Field(properties) {
         var shipHeight,
             shipWidth;
 
-        if (location.orientation === "horizontal")
-        {
+        if (location.orientation === "horizontal") {
             shipWidth = cellSize + lineWidth;
             shipHeight = (cellSize + lineWidth) *  location.size;
         }
-        else
-        {
+        else {
             shipHeight = cellSize + lineWidth;
             shipWidth = (cellSize + lineWidth) *  location.size;
         }
@@ -210,6 +207,10 @@ function Field(properties) {
         context.closePath();
     };
 
+    /*Рисует предупреждения в местах коллизий размещаемого корабля с уже размещёнными.
+    * Принимает массив объектов warnings, где:
+    * warnings[i].x - позиция x расположения коллизии
+    * warnings[i].y - позиция y расположения коллизии*/
     this.drawWarnings = function(warnings) {
         var i,
             max;
@@ -230,6 +231,7 @@ function Field(properties) {
 
     };
 
+    /*Метод очистки поля, затирает поле прямоугольником*/
     this.clearField = function() {
         context.clearRect(fieldPositionX, fieldPositionY, fieldSize, fieldSize);
     };
@@ -237,24 +239,26 @@ function Field(properties) {
 
 function FieldData() {
     var that = this,
-        fieldMap = [];
+        fieldMap = []; // Карта поля
     var EMPTY = 0,
         SHIP = 1,
         DEAD_SHIP = 2,
         MISS = 3,
         SHIP_INDENT = 4;
     this.ships = [];
+    this.sheepsSizeOrder = [1, 1, 1, 1, 2, 2, 2, 3, 3, 4]
     var i, j;
-
-    for (i = 0; i < 10; i += 1)
-    {
+    /*Цикл инициализирует карту поля, заполняя её нулями*/
+    for (i = 0; i < 10; i += 1) {
         fieldMap[i] = [];
-        for (j = 0; j < 10; j += 1)
-        {
+        for (j = 0; j < 10; j += 1) {
             fieldMap[i][j] = EMPTY;
         }
     }
-
+    /*Добавляет новый корабль (объект Ship) в массив ships. Если у последнего размещённого
+    * пользователем корабля ориентация была изменена на вертикальную, то у нового корабля
+    * она тоже меняется. Нужна чтобы при размещении пользователем корабли оставались в выбраном
+    *  пользователем положении*/
     this.addShip = function(ship) {
         if (that.ships.length > 0 && that.ships[that.ships.length - 1].getOrientation() === "vertical") {
             ship.toggleOrientation();
@@ -265,7 +269,7 @@ function FieldData() {
     this.getShips = function () {
         return that.ships;
     };
-
+    /*Добавляет новый корабль на карту, принимает индекс корабля в массиве ships*/
     this.fieldMapAddShip = function(index) {
         var i,
             location = that.ships[index].getLocation();
@@ -281,7 +285,8 @@ function FieldData() {
         }
         addShipEmptySpace(index);
     };
-
+    /*Окружает установленный корабль "пустым" пространством на карте размером в одну клетку,
+     * в котором нельзя размещать другие корабли*/
     function addShipEmptySpace(index) {
         var i,
             j,
@@ -306,7 +311,8 @@ function FieldData() {
             }
         }
     }
-
+    /*Возвращает массив объектов с координатами ячеек, кде происходит коллизия
+     * размещаемого корабля с уже стоящими. Если таких ячеек нет, то возвращается null*/
     this.getCollisionWarnings = function(index) {
         var i,
             warnings = [],
@@ -336,15 +342,52 @@ function FieldData() {
         }
 
     };
+    /*Метод заполняет поле компьютерного противника случайным образом*/
+    this.ShipsAutoPlacement = function () {
+        var i,
+            max,
+            x,
+            y,
+            extremePoint;
+        for (max = that.sheepsSizeOrder.length, i = 0; i < max; i += 1) {
+            that.ships.push(new Ship(that.sheepsSizeOrder[i]));
+            if (getRandom(0, 1) === 1) {
+                that.ships[i].toggleOrientation();
+            }
+            /* Пока крайняя точка корабля выходит за пределы поля или корабль налазит
+             * на уже стоящие корабли*/
+            do {
+                x = getRandom(0, 9);
+                y = getRandom(0, 9);
+                if (that.ships[i].getOrientation() === "horizontal") {
+                    extremePoint = x + that.sheepsSizeOrder[i];
+                }
+                else {
+                    extremePoint = y + that.sheepsSizeOrder[i];
+                }
+                that.ships[i].setPosition(x, y);
+            } while (extremePoint > 10 || that.getCollisionWarnings(i) !== null);
+
+            that.fieldMapAddShip(i);
+        }
+    };
+
+    /*Возвращает случайное число от min до max*/
+    function getRandom(min, max) {
+        return Math.floor(Math.random() * (max - min + 1) ) + min;
+    }
 }
 
+/*Класс отвечает за отдельный корабль, конструктор принимает размер корабля*/
 function Ship(shipSize) {
-    var size = shipSize,
-        health = shipSize,
-        positionX = null,
-        positionY = null,
-        orientation = "horizontal";
+    var size = shipSize, // Размер корабля
+        health = shipSize, // Оставшиеся целые палубы
+        positionX = null, // Позиция по оси x
+        positionY = null, // Позиция по оси y
+        orientation = "horizontal"; // Ориентация (горизонтальная или вертикальная)
 
+    /*Задаёт позицию кораблю. Если по какой-то координате корабль выходит за пределы поля,
+    * то данная координата не применяется*/
     this.setPosition = function(x, y) {
         if (!(orientation === "horizontal" && x + size > 10)) {
             positionX = x;
@@ -353,7 +396,9 @@ function Ship(shipSize) {
             positionY = y;
         }
     };
-
+    /*Возвращает истину, если передаваемые координаты корабля не соответствуют текущим.
+    * Метод нужен чтобы определить изменилась ли ячейка, над которой расположен курсор,
+    * или курсор перемещается в одной и той же ячейке*/
     this.isNewPosition = function(x, y) {
         if (positionX !== x || positionY !== y) {
             return true;
@@ -363,7 +408,7 @@ function Ship(shipSize) {
         }
 
     };
-
+    /*Возвращает объект с информацией о положении корабля*/
     this.getLocation = function() {
         return {
             x: positionX,
@@ -372,7 +417,7 @@ function Ship(shipSize) {
             orientation: orientation
         };
     };
-
+    /*Изменяет ориентацию корабля*/
     this.toggleOrientation = function () {
         if (orientation === "horizontal") {
             orientation = "vertical";
@@ -387,7 +432,7 @@ function Ship(shipSize) {
             }
         }
     };
-
+    /*Возвращает ориентацию корабля*/
     this.getOrientation = function () {
         return orientation;
     };
