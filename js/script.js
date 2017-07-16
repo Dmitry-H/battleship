@@ -37,7 +37,8 @@ function Controller() {
 
         function establishShip(event) {
             var size;
-            if (view.playerField.getPosition(event) !== null) {
+            if (view.playerField.getPosition(event) !== null &&
+                model.playerField.getCollisionWarnings(model.playerField.ships.length - 1) === null) {
                 size = model.sheepsSizeOrder.shift();
                 if (size !== undefined) {
                     model.playerField.fieldMapAddShip(model.playerField.ships.length - 1);
@@ -58,6 +59,7 @@ function Controller() {
     }
 
     function repaintField(fieldData, fieldView) {
+        // var warnings = ;
         fieldView.clearField();
         fieldView.drawField();
         fieldView.drawShips(fieldData.ships);
@@ -211,18 +213,21 @@ function Field(properties) {
     this.drawWarnings = function(warnings) {
         var i,
             max;
-        for (max = warnings.length, i = 0; i < max; i += 1) {
-            context.beginPath();
-            context.fillStyle = warningColor;
-            context.fillRect(
-                fieldPositionX + getCoordinateOffset(warnings[i].x),
-                fieldPositionY + getCoordinateOffset(warnings[i].y),
-                cellSize + lineWidth,
-                cellSize + lineWidth
-            );
-            context.stroke();
-            context.closePath();
+        if (warnings !== null) {
+            for (max = warnings.length, i = 0; i < max; i += 1) {
+                context.beginPath();
+                context.fillStyle = warningColor;
+                context.fillRect(
+                    fieldPositionX + getCoordinateOffset(warnings[i].x),
+                    fieldPositionY + getCoordinateOffset(warnings[i].y),
+                    cellSize + lineWidth,
+                    cellSize + lineWidth
+                );
+                context.stroke();
+                context.closePath();
+            }
         }
+
     };
 
     this.clearField = function() {
@@ -236,7 +241,8 @@ function FieldData() {
     var EMPTY = 0,
         SHIP = 1,
         DEAD_SHIP = 2,
-        MISS = 3;
+        MISS = 3,
+        SHIP_INDENT = 4;
     this.ships = [];
     var i, j;
 
@@ -273,10 +279,32 @@ function FieldData() {
                 fieldMap[location.x][location.y + i] = SHIP;
             }
         }
+        addShipEmptySpace(index);
     };
 
     function addShipEmptySpace(index) {
+        var i,
+            j,
+            maxI,
+            maxJ,
+            location = that.ships[index].getLocation();
 
+        if (location.orientation === "horizontal") {
+            maxI = location.x + location.size;
+            maxJ = location.y + 1;
+        }
+        else {
+            maxI = location.x + 1;
+            maxJ = location.y + location.size;
+        }
+
+        for (i = location.x - 1; i <= maxI; i += 1) {
+            for (j = location.y - 1; j <= maxJ; j += 1) {
+                if ((i >= 0 && i <=9 && j >= 0 && j <= 9) && fieldMap[i][j] !== SHIP) {
+                    fieldMap[i][j] = SHIP_INDENT;
+                }
+            }
+        }
     }
 
     this.getCollisionWarnings = function(index) {
@@ -286,20 +314,16 @@ function FieldData() {
 
         if (location.orientation === "horizontal") {
             for (i = 0; i < location.size; i += 1) {
-                if (fieldMap[location.x + i][location.y] === SHIP) {
-                    warnings.push({x: location.x + i, y: location.y})
-                }
-                if (fieldMap[location.x + i + 1][location.y] === SHIP) {
-                    warnings.push({x: location.x + i, y: location.y})
-                }
-                if (fieldMap[location.x - 1][location.y] === SHIP) {
+                if (fieldMap[location.x + i][location.y] === SHIP ||
+                    fieldMap[location.x + i][location.y] === SHIP_INDENT) {
                     warnings.push({x: location.x + i, y: location.y})
                 }
             }
         }
         else {
             for (i = 0; i < location.size; i += 1) {
-                if (fieldMap[location.x][location.y + i] === SHIP) {
+                if (fieldMap[location.x][location.y + i] === SHIP ||
+                    fieldMap[location.x][location.y + i] === SHIP_INDENT) {
                     warnings.push({x: location.x, y: location.y + i})
                 }
             }
