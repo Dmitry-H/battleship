@@ -15,54 +15,55 @@ function Controller() {
         document.getElementById("canvas").addEventListener("click", establishShip);
         window.addEventListener("keypress", changeShipOrientation);
 
-        /*Вешается на событие движения мыши над полем во время размещения кораблей игроком,
-         *перемещает по полю размещаемый корабль*/
-        function placementEvent(event) {
-            var position = view.playerField.getPosition(event);
-            if (position !== null) {
-                if (model.playerField.ships[model.playerField.ships.length - 1]
-                        .isNewPosition(position.posX, position.posY)) {
-                    model.playerField.ships[model.playerField.ships.length - 1]
-                        .setPosition(position.posX, position.posY);
-                    repaintField(model.playerField, view.playerField);
-                }
-            }
-        }
-        /*Вешается на клавишу смены ориентации корабля (пробел) во время размещения кораблей игроком,
-         *меняет его ориентацию (корабля, а не игрока)*/
-        function changeShipOrientation(event) {
-            if (event.keyCode === 32) {
+    }
+
+    /*Вешается на событие движения мыши над полем во время размещения кораблей игроком,
+     *перемещает по полю размещаемый корабль*/
+    function placementEvent(event) {
+        var position = view.playerField.getPosition(event);
+        if (position !== null) {
+            if (model.playerField.ships[model.playerField.ships.length - 1]
+                    .isNewPosition(position.posX, position.posY)) {
                 model.playerField.ships[model.playerField.ships.length - 1]
-                    .toggleOrientation();
+                    .setPosition(position.posX, position.posY);
                 repaintField(model.playerField, view.playerField);
             }
         }
+    }
+    /*Вешается на клавишу смены ориентации корабля (пробел) во время размещения кораблей игроком,
+     *меняет его ориентацию (корабля, а не игрока)*/
+    function changeShipOrientation(event) {
+        if (event.keyCode === 32) {
+            model.playerField.ships[model.playerField.ships.length - 1]
+                .toggleOrientation();
+            repaintField(model.playerField, view.playerField);
+        }
+    }
 
-        /*Вешается на клик по полю во время размещения кораблей игроком, если позиция корабля допустима, то
-        * устанавлевает его на указанное место*/
-        function establishShip(event) {
-            var size;
-            /*Если курсор не за пределами поля и размещаемый корабль не пересекается с уже имеющимися*/
-            if (view.playerField.getPosition(event) !== null &&
-                model.playerField.getCollisionWarnings(model.playerField.ships.length - 1) === null) {
-                size = model.playerField.sheepsSizeOrder.shift();
-                /*если ещё остались корабли для размещения*/
-                if (size !== undefined) {
-                    model.playerField.fieldMapAddShip(model.playerField.ships.length - 1);
-                    model.playerField.addShip(new Ship(size));
+    /*Вешается на клик по полю во время размещения кораблей игроком, если позиция корабля допустима, то
+     * устанавлевает его на указанное место*/
+    function establishShip(event) {
+        var size;
+        /*Если курсор не за пределами поля и размещаемый корабль не пересекается с уже имеющимися*/
+        if (view.playerField.getPosition(event) !== null &&
+            model.playerField.getCollisionWarnings(model.playerField.ships.length - 1) === null) {
+            size = model.playerField.sheepsSizeOrder.shift();
+            /*если ещё остались корабли для размещения*/
+            if (size !== undefined) {
+                model.playerField.fieldMapAddShip(model.playerField.ships.length - 1);
+                model.playerField.addShip(new Ship(size));
 
-                }
-                else {
-                    placementFinish();
-                }
+            }
+            else {
+                placementFinish();
             }
         }
-        /*Снимает события отвечающие за размещение кораблей игроком*/
-        function placementFinish() {
-            document.getElementById("canvas").removeEventListener("mousemove", placementEvent);
-            document.getElementById("canvas").removeEventListener("click", establishShip);
-            window.removeEventListener("keypress", changeShipOrientation);
-        }
+    }
+    /*Снимает события отвечающие за размещение кораблей игроком*/
+    function placementFinish() {
+        document.getElementById("canvas").removeEventListener("mousemove", placementEvent);
+        document.getElementById("canvas").removeEventListener("click", establishShip);
+        window.removeEventListener("keypress", changeShipOrientation);
     }
 
     /*Очищает и поля и рисует заново пустое поле, корабли и предупреждения о коллизиях (если есть)*/
@@ -84,8 +85,9 @@ function View() {
     var defaultCommonSettings = {
         lineWidth: 2,
         cellSize: 25,
-        fieldColor: "#888",
-        shipColor: "#00f",
+        fieldBGColor: "#1485a8",
+        fieldColor: "#777",
+        shipColor: "#91ffe6",
         warningColor: "rgba(255, 0, 0, .5)"
     };
     var playerFieldSettings = {
@@ -108,6 +110,7 @@ function View() {
 function Field(properties) {
     var lineWidth = properties.lineWidth,
         cellSize = properties.cellSize,
+        fieldBGColor = properties.fieldBGColor,
         fieldColor = properties.fieldColor,
         shipColor = properties.shipColor,
         warningColor = properties.warningColor,
@@ -146,6 +149,13 @@ function Field(properties) {
     /*Рисует пустое поле*/
     this.drawField = function() {
         var i;
+        /*Рисует фон поля*/
+        context.beginPath();
+        context.fillStyle = fieldBGColor;
+        context.fillRect(fieldPositionX, fieldPositionY, fieldSize, fieldSize);
+        context.closePath();
+
+        /*Рисует поле*/
         context.beginPath();
         context.strokeStyle = fieldColor;
         context.lineWidth = lineWidth;
